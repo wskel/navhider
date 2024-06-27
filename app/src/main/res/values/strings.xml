@@ -1,9 +1,10 @@
 <resources>
     <string name="app_name">NavHider</string>
-    <string name="permission_granted">Warning: WRITE_SECURE_SETTINGS permission granted</string>
+    <string name="permission_granted">WRITE_SECURE_SETTINGS permission granted</string>
     <string name="permission_not_granted">Warning: WRITE_SECURE_SETTINGS permission not granted</string>
     <string name="gesture_hint_enabled">Gesture Hint Enabled</string>
     <string name="gesture_hint_disabled">Gesture Hint Disabled</string>
-    <string name="error_hide_gesture_hint">WRITE_SECURE_SETTINGS permission not granted. Grant permission by issuing ADB command:\nadb shell pm grant %1$s android.permission.WRITE_SECURE_SETTINGS</string>
+    <string name="error_hide_gesture_hint">Warning: WRITE_SECURE_SETTINGS permission not granted. Grant permission by issuing ADB command:\nadb shell pm grant %1$s android.permission.WRITE_SECURE_SETTINGS</string>
     <string name="error_something_went_wrong">Something went wrong</string>
+    <string name="button_dismiss">Dismiss</string>
 </resources>

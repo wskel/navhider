@@ -2,6 +2,7 @@ package dev.wskel.navhider
 
 import android.content.ContentResolver
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.RemoteException
 import android.provider.Settings
@@ -17,13 +18,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -35,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.wskel.navhider.ui.theme.NavHiderTheme
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val NAV_BAR_GESTURE_HINT = "navigation_bar_gesture_hint"
@@ -70,26 +77,25 @@ fun MainScreen(modifier: Modifier = Modifier) {
     val isGestureHintEnabled = remember { mutableStateOf(initialGestureHintState) }
     val snackbarHostState = remember { SnackbarHostState() }
     val isRefreshing = remember { mutableStateOf(false) }
-    val state = rememberPullToRefreshState()
+    val pullRefreshState = rememberPullToRefreshState()
     val scope = rememberCoroutineScope()
 
+    val onRefreshLocal = onRefresh(
+        context,
+        isGestureHintEnabled,
+        scope,
+        snackbarHostState,
+        pullRefreshState
+    )
+
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { MessageSnackBarHost(snackbarHostState) },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         PullToRefreshBox(
-            state = state,
+            state = pullRefreshState,
             isRefreshing = isRefreshing.value,
-            onRefresh = {
-                val message = if (Settings.System.canWrite(context)) {
-                    isGestureHintEnabled.value = context.contentResolver.isGestureHintEnabled()
-                    context.getString(R.string.permission_granted)
-                } else {
-                    context.getString(R.string.permission_not_granted)
-                }
-
-                scope.launch { snackbarHostState.showSnackbar(message) }
-            },
+            onRefresh = onRefreshLocal,
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
@@ -101,32 +107,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
                 verticalArrangement = Arrangement.Center
             ) {
                 item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Switch(
-                            checked = isGestureHintEnabled.value,
-                            onCheckedChange = { enabled ->
-                                isGestureHintEnabled.value = enabled
-                                context.contentResolver.setNavigationBarGestureHint(
-                                    context,
-                                    enabled,
-                                    scope,
-                                    snackbarHostState
-                                )
-                            },
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                        Text(
-                            text = if (isGestureHintEnabled.value)
-                                stringResource(R.string.gesture_hint_enabled)
-                            else stringResource(R.string.gesture_hint_disabled),
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
+                    GestureHintControl(context, isGestureHintEnabled, scope, snackbarHostState)
                 }
             }
 
@@ -134,8 +115,98 @@ fun MainScreen(modifier: Modifier = Modifier) {
     }
 }
 
+@Composable
+private fun MessageSnackBarHost(snackbarHostState: SnackbarHostState) {
+    SnackbarHost(snackbarHostState) { data ->
+        Snackbar(
+            dismissAction = {
+                TextButton(onClick = { data.dismiss() }) {
+                    Text(stringResource(R.string.button_dismiss))
+                }
+            },
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(data.visuals.message)
+        }
+    }
+}
+
+@Composable
+private fun GestureHintControl(
+    context: Context,
+    isGestureHintEnabled: MutableState<Boolean>,
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Switch(
+            checked = isGestureHintEnabled.value,
+            onCheckedChange = { enabled ->
+                isGestureHintEnabled.value = enabled
+                context.contentResolver.setNavigationBarGestureHint(
+                    context,
+                    enabled,
+                    scope,
+                    snackbarHostState
+                )
+            },
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+        Text(
+            text = if (isGestureHintEnabled.value)
+                stringResource(R.string.gesture_hint_enabled)
+            else stringResource(R.string.gesture_hint_disabled),
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+private fun onRefresh(
+    context: Context,
+    isGestureHintEnabled: MutableState<Boolean>,
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    pullRefreshState: PullToRefreshState
+): () -> Unit = {
+    isGestureHintEnabled.value = context.contentResolver.isGestureHintEnabled()
+
+    val message = if (context.hasWriteSecureSettingsPermission()) {
+        context.getString(R.string.permission_granted)
+    } else {
+        context.getString(R.string.permission_not_granted)
+    }
+
+    scope.run {
+        launch { snackbarHostState.showSnackbarWithDismissal(message) }
+        launch {
+            delay(100)
+            pullRefreshState.animateToHidden()
+        }
+    }
+}
+
+suspend fun SnackbarHostState.showSnackbarWithDismissal(
+    message: String,
+    duration: SnackbarDuration = SnackbarDuration.Short
+) {
+    currentSnackbarData?.dismiss()
+    showSnackbar(message, duration = duration)
+}
+
 private fun ContentResolver.isGestureHintEnabled() =
     TRUE == Settings.Global.getInt(this, NAV_BAR_GESTURE_HINT, TRUE)
+
+private fun Context.hasWriteSecureSettingsPermission(): Boolean {
+    val permissionCheckResult =
+        checkCallingOrSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS)
+    return permissionCheckResult == PackageManager.PERMISSION_GRANTED
+}
 
 private fun ContentResolver.setNavigationBarGestureHint(
     context: Context,
@@ -144,7 +215,7 @@ private fun ContentResolver.setNavigationBarGestureHint(
     snackbarHostState: SnackbarHostState
 ) {
     fun showSnackbarError(message: String) = scope.launch {
-        snackbarHostState.showSnackbar(message)
+        snackbarHostState.showSnackbarWithDismissal(message, SnackbarDuration.Indefinite)
     }
 
     try {
