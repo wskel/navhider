@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">NavHider</string>
+    <string name="permission_granted">WRITE_SECURE_SETTINGS permission granted</string>
+    <string name="permission_not_granted">WRITE_SECURE_SETTINGS permission not granted</string>
+    <string name="gesture_hint_enabled">Gesture Hint Enabled</string>
+    <string name="gesture_hint_disabled">Gesture Hint Disabled</string>
+</resources>
