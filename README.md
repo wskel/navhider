@@ -18,6 +18,7 @@ To re-enable the gesture hint:
 ```
 adb shell settings put global navigation_bar_gesture_hint 1
 ```
+Lock and unlock the device to apply changes.
 
 ## Using the app
 
@@ -49,8 +50,9 @@ adb shell pm grant dev.wskel.navhider android.permission.WRITE_SECURE_SETTINGS
 
 6. Launch the app on the device.
 
-7. Use the toggle switch in the app to hide or show the navigation pill / gesture hint. Lock and
-   unlock the device to apply changes.
+7. Use the toggle switch in the app to hide or show the navigation pill / gesture hint.
+
+8. Lock and unlock the device to apply changes.
 
 ## Note
 
