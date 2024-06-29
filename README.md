@@ -49,7 +49,8 @@ adb shell pm grant dev.wskel.navhider android.permission.WRITE_SECURE_SETTINGS
 
 6. Launch the app on the device.
 
-7. Use the toggle switch in the app to hide or show the navigation pill / gesture hint.
+7. Use the toggle switch in the app to hide or show the navigation pill / gesture hint. Lock and
+   unlock the device to apply changes.
 
 ## Note
 
